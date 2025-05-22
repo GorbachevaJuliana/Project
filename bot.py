@@ -9,7 +9,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
 # from dotenv import load_dotenv
-API_TOKEN = '8003685426:AAGbaa-jzCyNoHPCLA-kZE8Ilq3WrVPyb5o'
+API_TOKEN = ''
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 conn = sqlite3.connect('project_db.db')

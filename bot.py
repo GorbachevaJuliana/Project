@@ -9,7 +9,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
-API_TOKEN = '8003685426:AAGbaa-jzCyNoHPCLA-kZE8Ilq3WrVPyb5o'
+API_TOKEN = ''
 
 conn = sqlite3.connect('project_db.db')
 cursor = conn.cursor()
@@ -27,11 +27,19 @@ class Form(StatesGroup):
 #     resize_keyboard=True,
 #     one_time_keyboard=True
 # )
+
+class TournamentForm():
+    ...
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     answers = ['Привет, как зовут игрока?', 'Введи имя игрока']
     await message.answer(random.choice(answers))
     await state.set_state(Form.name)
+
+@dp.message(F.text == "/tournament")
+async def find_command_handler(message: Message, state):
+    await message.answer("Введите название турнира.")
+    await state.set_state(TournamentForm.name)
 
 async def name_chose(message: Message, state: FSMContext):
     await state.update_data(name=message.text)

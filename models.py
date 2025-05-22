@@ -3,20 +3,21 @@ conn = sqlite3.connect('project.db')
 cursor = conn.cursor()
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS "tournament" (
-    "id" INTEGER PRIMARY KEY NOT NULL AUTOINCREMENT,
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "name" VARCHAR(50) NOT NULL,
     "date" DATETIME NOT NULL,
     "place" TEXT NOT NULL,
     "players" TEXT NOT NULL,
     "type" TEXT NOT NULL,
+    "games" TEXT,
     FOREIGN KEY("players") REFERENCES "player"("name"),
-    FOREIGN KEY("id") REFERENCES "game"("id")
+    FOREIGN KEY("games") REFERENCES "game"("id")
 );
 ''')
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS "player" (
-    "id" INTEGER PRIMARY KEY NOT NULL AUTOINCREMENT,
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "name" VARCHAR(100) UNIQUE NOT NULL,
     "rating" integer NOT NULL,
     "age" integer,
@@ -27,7 +28,7 @@ cursor.execute('''
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS "game" (
-    "id" INTEGER PRIMARY KEY NOT NULL AUTOINCREMENT,
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
     "date" TEXT NOT NULL,
     "player1" VARCHAR(100) NOT NULL,
     "player2" VARCHAR(100) NOT NULL,

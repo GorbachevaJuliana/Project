@@ -4,11 +4,11 @@ import random
 import sqlite3
 from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ParseMode
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup
+from aiogram.types import Message, FSInputFile, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 API_TOKEN = '8003685426:AAGbaa-jzCyNoHPCLA-kZE8Ilq3WrVPyb5o'
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
@@ -20,8 +20,9 @@ class Form(StatesGroup):
     rating = State()
     age = State()
     country = State()
+    photo = State()
 class TournamentForm(StatesGroup):
-    name = State()
+    name = State() 
     date = State()
     place = State()
     players = State()
@@ -66,8 +67,7 @@ async def players_chose(message:Message, state: FSMContext):
 @dp.callback_query(lambda c: c.data in ['ATP 1000', 'WTA 1000', 'ATP 500', 'WTA 500', 'Challenger', 'Wimbledon', 'Roland Garros', 'Australian Open', 'US Open',])
 async def handle_yes(callback, state):
     print(callback)
-    await state.update_data(type)
-    await callback.answer()
+    await state.update_data(type=callback)
     await callback.message.answer('Напиши все матчи')
     await state.set_state(Form.games)
 
@@ -105,35 +105,65 @@ async def age_chose(message: Message, state: FSMContext):
 
 async def country_chose(message: Message, state: FSMContext):
     await state.update_data(country=message.text)
+    await message.answer("Теперь отправьте фото игрока:")
+    await state.set_state(Form.photo)
+
+
+async def photo_chose(message: Message, state: FSMContext):
+    photo = message.photo[-1]
+    file = await bot.get_file(photo.file_id)
+    photo_data = await bot.download_file(file.file_path)
+    photo_bytes = photo_data.read()
     data = await state.get_data()
-    await message.answer(f"Твои данные {data}")
     cursor.executemany('''
-        INSERT INTO player (name, rating, age, country)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO player (name, rating, age, country, photo)
+        VALUES (?, ?, ?, ?, ?)
         ''', [
             (data['name'],
             data['rating'],
             data['age'],
-            data['country'])
+            data['country'],
+            photo_bytes)
         ])
+    
     conn.commit()
+    await message.answer(f"Твои данные {data}")
     await state.clear()
 
+@dp.message(F.text == "/list")
+async def list_dogs(message: Message):
+    cursor.execute("SELECT name, country FROM player")
+    rows = cursor.fetchall()
+
+    if not rows:
+        await message.answer("В базе пока нет ни одного игрока.")
+        return
+
+    for name, country in rows:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Фото", callback_data=f"photo:{name}")]
+        ])
+        await message.answer(f"{name} - {country}", reply_markup=keyboard)
 
 
-async def main():
-    dp.message.register(cmd_start, F.text == '/start')
-    dp.message.register(cmd_start, F.text == '/tournament')
-    dp.message.register(name_chose, Form.name)
-    dp.message.register(rating_chose, Form.rating)
-    dp.message.register(age_chose, Form.age)
-    dp.message.register(country_chose, Form.country)
-    dp.message.register(find_command_handler, TournamentForm.name)
-    dp.message.register(date_chose, TournamentForm.date)
-    dp.message.register(place_chose, TournamentForm.place)
-    dp.message.register(players_chose, TournamentForm.players)
-    dp.message.register(handle_yes, TournamentForm.type)
-    await dp.start_polling(bot)
+# Обработка кнопок для отправки фотографии у каждого игрока
+@dp.callback_query(F.data.startswith("photo:"))
+async def send_dog_photo(callback):
+    player_name = callback.data.split(":")[1]
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    cursor.execute("SELECT name, country, photo FROM player WHERE name = ?", (player_name,))
+    row = cursor.fetchall()[0]
+    print(row)
+
+    if row:
+        name, country, photo_blob = row
+        with open("temp.jpg", "wb") as f:
+            f.write(photo_blob)
+
+        photo = FSInputFile("temp.jpg")
+        await callback.message.answer_photo(photo, caption=f"{name}\n Страна: {country}")
+        os.remove("temp.jpg")
+    else:
+        await callback.message.answer(" не найдено.")
+
+    await callback.answer()
